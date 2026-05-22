@@ -1,0 +1,10 @@
+django>=6.0
+djangorestframework
+psycopg2-binary
+python-dotenv
+anthropic
+groq
+requests
+factory-boy
+pytest
+pytest-django

@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Waiter 🍽️</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #0f0f0f;
+            color: #ffffff;
+            font-family: 'Segoe UI', sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #333;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo {
+            font-size: 32px;
+        }
+
+        .header-title h1 {
+            font-size: 20px;
+            font-weight: 700;
+            color: #ff6b35;
+        }
+
+        .header-title p {
+            font-size: 12px;
+            color: #888;
+        }
+
+        .status-badge {
+            background: #1a3a1a;
+            border: 1px solid #2d5a2d;
+            color: #4caf50;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #4caf50;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* Table info bar */
+        .table-bar {
+            background: #1a1a1a;
+            padding: 10px 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            border-bottom: 1px solid #222;
+            font-size: 13px;
+            color: #888;
+        }
+
+        .table-bar span {
+            color: #ff6b35;
+            font-weight: 600;
+        }
+
+        /* Main layout */
+        .main {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Chat section */
+        .chat-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Messages */
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .messages::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .messages::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+
+        .messages::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 3px;
+        }
+
+        /* Message bubbles */
+        .message {
+            display: flex;
+            gap: 12px;
+            max-width: 80%;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+
+        .message.assistant {
+            align-self: flex-start;
+        }
+
+        .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .avatar.user-avatar {
+            background: #ff6b35;
+        }
+
+        .avatar.ai-avatar {
+            background: #1a3a1a;
+            border: 1px solid #2d5a2d;
+        }
+
+        .bubble {
+            padding: 16px 20px;
+            border-radius: 16px;
+            font-size: 18px;
+            line-height: 1.8;
+            max-width: 100%;
+            white-space: pre-wrap;
+        }
+
+        .message.user .bubble {
+            background: #ff6b35;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.assistant .bubble {
+            background: #1e1e1e;
+            border: 1px solid #333;
+            color: #e0e0e0;
+            border-bottom-left-radius: 4px;
+        }
+
+        .timestamp {
+            font-size: 10px;
+            color: #555;
+            margin-top: 4px;
+            text-align: right;
+        }
+
+        /* Typing indicator */
+        .typing {
+            display: none;
+            align-self: flex-start;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .typing.show {
+            display: flex;
+        }
+
+        .typing-dots {
+            background: #1e1e1e;
+            border: 1px solid #333;
+            padding: 12px 16px;
+            border-radius: 16px;
+            border-bottom-left-radius: 4px;
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: #555;
+            border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typing {
+            0%, 100% { transform: translateY(0); background: #555; }
+            50% { transform: translateY(-6px); background: #ff6b35; }
+        }
+
+        /* Input area */
+        .input-area {
+            padding: 16px 24px;
+            background: #1a1a1a;
+            border-top: 1px solid #333;
+        }
+
+        /* Quick actions */
+        .quick-actions {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        .quick-btn {
+            background: #1e1e1e;
+            border: 1px solid #333;
+            color: #aaa;
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .quick-btn:hover {
+            border-color: #ff6b35;
+            color: #ff6b35;
+            background: #1a0f0a;
+        }
+
+        /* Input box */
+        .input-box {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+        }
+
+        .input-box textarea {
+            flex: 1;
+            background: #2a2a2a;
+            border: 1px solid #333;
+            color: white;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 16px;
+            resize: none;
+            outline: none;
+            font-family: inherit;
+            max-height: 120px;
+            min-height: 48px;
+            transition: border-color 0.2s;
+        }
+
+        .input-box textarea:focus {
+            border-color: #ff6b35;
+        }
+
+        .input-box textarea::placeholder {
+            color: #555;
+        }
+
+        .send-btn {
+            background: #ff6b35;
+            border: none;
+            color: white;
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 20px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .send-btn:hover {
+            background: #e55a2b;
+            transform: scale(1.05);
+        }
+
+        .send-btn:disabled {
+            background: #333;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Cart sidebar */
+        .cart-sidebar {
+            width: 280px;
+            background: #1a1a1a;
+            border-left: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .cart-header {
+            padding: 16px;
+            border-bottom: 1px solid #333;
+            font-size: 14px;
+            font-weight: 600;
+            color: #ff6b35;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .cart-items {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        .cart-empty {
+            color: #555;
+            font-size: 13px;
+            text-align: center;
+            margin-top: 40px;
+        }
+
+        .cart-item {
+            background: #2a2a2a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .cart-item-name {
+            color: #e0e0e0;
+            font-weight: 500;
+        }
+
+        .cart-item-details {
+            color: #888;
+            margin-top: 4px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .cart-total {
+            padding: 16px;
+            border-top: 1px solid #333;
+        }
+
+        .cart-total-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            color: #888;
+            margin-bottom: 6px;
+        }
+
+        .cart-total-row.final {
+            color: #ff6b35;
+            font-weight: 700;
+            font-size: 15px;
+            border-top: 1px solid #333;
+            padding-top: 8px;
+            margin-top: 4px;
+        }
+
+        /* Welcome message */
+        .welcome {
+            text-align: center;
+            padding: 40px 20px;
+            color: #555;
+        }
+
+        .welcome h2 {
+            font-size: 32px;
+            color: #ff6b35;
+            margin-bottom: 12px;
+        }
+
+        .welcome p {
+            font-size: 18px;
+            margin-bottom: 6px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+    <div class="header-left">
+        <div class="logo">🍽️</div>
+        <div class="header-title">
+            <h1>AI Waiter</h1>
+            <p>Powered by Groq AI</p>
+        </div>
+    </div>
+    <div class="status-badge">
+        <div class="status-dot"></div>
+        AI Online
+    </div>
+</div>
+
+<!-- Table bar -->
+<div class="table-bar">
+    🪑 Table: <span id="tableNumber">5</span>
+    &nbsp;|&nbsp;
+    🔑 Session: <span id="sessionDisplay">New Session</span>
+</div>
+
+<!-- Main -->
+<div class="main">
+
+    <!-- Chat Section -->
+    <div class="chat-section">
+
+        <!-- Messages -->
+        <div class="messages" id="messages">
+            <div class="welcome">
+                <h2>Welcome! 👋</h2>
+                <p>I am your AI waiter for today.</p>
+                <p>Ask me about the menu or place an order!</p>
+            </div>
+        </div>
+
+        <!-- Typing indicator -->
+        <div class="typing" id="typing">
+            <div class="avatar ai-avatar">🤖</div>
+            <div class="typing-dots">
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="input-area">
+            <!-- Quick actions -->
+            <div class="quick-actions">
+                <button class="quick-btn" onclick="sendQuick('Show me the menu')">📋 Menu</button>
+                <button class="quick-btn" onclick="sendQuick('What are your starters?')">🥗 Starters</button>
+                <button class="quick-btn" onclick="sendQuick('Show me main courses')">🍖 Mains</button>
+                <button class="quick-btn" onclick="sendQuick('What desserts do you have?')">🍰 Desserts</button>
+                <button class="quick-btn" onclick="sendQuick('Show me my cart')">🛒 My Cart</button>
+                <button class="quick-btn" onclick="sendQuick('I want to confirm my order')">✅ Confirm Order</button>
+            </div>
+
+            <!-- Input box -->
+            <div class="input-box">
+                <textarea
+                    id="messageInput"
+                    placeholder="Type your message here..."
+                    rows="1"
+                    onkeydown="handleKeyDown(event)"
+                    oninput="autoResize(this)"
+                ></textarea>
+                <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+                    ➤
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cart Sidebar -->
+    <div class="cart-sidebar">
+        <div class="cart-header">
+            🛒 Your Order
+        </div>
+        <div class="cart-items" id="cartItems">
+            <div class="cart-empty">
+                Your cart is empty.<br>
+                Start by browsing the menu!
+            </div>
+        </div>
+        <div class="cart-total" id="cartTotal" style="display:none">
+            <div class="cart-total-row">
+                <span>Subtotal</span>
+                <span id="subtotal">$0.00</span>
+            </div>
+            <div class="cart-total-row">
+                <span>Tax (8%)</span>
+                <span id="tax">$0.00</span>
+            </div>
+            <div class="cart-total-row final">
+                <span>Total</span>
+                <span id="total">$0.00</span>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    let sessionKey = '';
+    let tableNumber = '5';
+
+    // Auto resize textarea
+    function autoResize(el) {
+        el.style.height = 'auto';
+        el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+    }
+
+    // Handle Enter key
+    function handleKeyDown(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    }
+
+    // Send quick message
+    function sendQuick(text) {
+        document.getElementById('messageInput').value = text;
+        sendMessage();
+    }
+
+    // Add message to chat
+    function addMessage(role, content) {
+        const messages = document.getElementById('messages');
+
+        // Remove welcome message if exists
+        const welcome = messages.querySelector('.welcome');
+        if (welcome) welcome.remove();
+
+        const time = new Date().toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+        const div = document.createElement('div');
+        div.className = `message ${role}`;
+        div.innerHTML = `
+            <div class="avatar ${role === 'user' ? 'user-avatar' : 'ai-avatar'}">
+                ${role === 'user' ? '👤' : '🤖'}
+            </div>
+            <div>
+                <div class="bubble">${content}</div>
+                <div class="timestamp">${time}</div>
+            </div>
+        `;
+
+        messages.appendChild(div);
+        messages.scrollTop = messages.scrollHeight;
+    }
+
+    // Update cart sidebar
+    function updateCart(cartContext) {
+        if (!cartContext || cartContext === 'Cart is currently empty.') {
+            document.getElementById('cartItems').innerHTML = `
+                <div class="cart-empty">
+                    Your cart is empty.<br>
+                    Start by browsing the menu!
+                </div>
+            `;
+            document.getElementById('cartTotal').style.display = 'none';
+            return;
+        }
+
+        // Parse cart context
+        const lines = cartContext.split('\n');
+        let html = '';
+        let subtotal = 0;
+
+        lines.forEach(line => {
+            if (line.includes('•') || line.includes('-')) {
+                html += `<div class="cart-item">
+                    <div class="cart-item-name">${line.trim()}</div>
+                </div>`;
+            }
+        });
+
+        if (html) {
+            document.getElementById('cartItems').innerHTML = html;
+            document.getElementById('cartTotal').style.display = 'block';
+        }
+    }
+
+    // Send message
+    async function sendMessage() {
+        const input = document.getElementById('messageInput');
+        const message = input.value.trim();
+
+        if (!message) return;
+
+        // Clear input
+        input.value = '';
+        input.style.height = 'auto';
+
+        // Add user message
+        addMessage('user', message);
+
+        // Show typing
+        document.getElementById('typing').classList.add('show');
+        document.getElementById('sendBtn').disabled = true;
+
+        try {
+            const response = await fetch('/api/chat/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    message: message,
+                    session_key: sessionKey || undefined,
+                    table_number: tableNumber,
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            // Check if reply exists
+            if (!data.reply) {
+                console.error('API response missing reply field:', data);
+                throw new Error('Invalid API response: missing reply field');
+            }
+
+            // Save session key
+            if (data.session_key) {
+                sessionKey = data.session_key;
+                document.getElementById('sessionDisplay').textContent =
+                    sessionKey.substring(0, 8) + '...';
+            }
+
+            // Hide typing
+            document.getElementById('typing').classList.remove('show');
+            document.getElementById('sendBtn').disabled = false;
+
+            // Add AI response
+            addMessage('assistant', data.reply);
+
+            // Update cart
+            if (data.cart_context) {
+                updateCart(data.cart_context);
+            }
+
+        } catch (error) {
+            console.error('Error sending message:', error);
+            document.getElementById('typing').classList.remove('show');
+            document.getElementById('sendBtn').disabled = false;
+            addMessage('assistant', 'Sorry, I could not connect. Error: ' + error.message);
+        }
+    }
+</script>
+
+</body>
+</html>
