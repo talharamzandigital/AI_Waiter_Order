@@ -1,4 +1,4 @@
-import uuid
+﻿import uuid
 from django.views import View
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
@@ -17,6 +17,31 @@ from django_ai_waiter.models import Conversation
 
 
 # ─────────────────────────────────────────────
+# OFF-TOPIC KEYWORD FILTER (FAST & RELIABLE)
+# ─────────────────────────────────────────────
+FOOD_KEYWORDS = [
+    'menu', 'food', 'eat', 'drink', 'order', 'burger', 'pizza',
+    'chicken', 'rice', 'bread', 'soup', 'salad', 'dessert', 'price',
+    'cart', 'checkout', 'hungry', 'starter', 'main', 'item', 'dish',
+    'spicy', 'sweet', 'cold', 'hot', 'water', 'juice', 'meal', 'snack',
+    'sandwich', 'fries', 'sauce', 'beef', 'mutton', 'fish', 'vegetable',
+    'add', 'remove', 'confirm', 'table', 'waiter', 'restaurant', 'serve',
+    'hello', 'hi', 'hey', 'thanks', 'thank', 'bye', 'help', 'what do you have',
+]
+
+def is_off_topic(message: str) -> bool:
+    msg = message.lower().strip()
+
+    # Agar koi bhi food keyword hai toh allow karo
+    for word in FOOD_KEYWORDS:
+        if word in msg:
+            return False
+
+    # Koi food keyword nahi mila = off-topic
+    return True
+
+
+# ─────────────────────────────────────────────
 # MAIN AI CHAT API (DRF)
 # ─────────────────────────────────────────────
 @method_decorator(csrf_exempt, name='dispatch')
@@ -24,7 +49,6 @@ class ChatView(APIView):
     """Main chat endpoint for AI waiter."""
 
     def post(self, request):
-   
 
         # Validate input
         serializer = MessageSerializer(data=request.data)
@@ -36,6 +60,15 @@ class ChatView(APIView):
 
         # Session handling
         session_key = data.get("session_key") or str(uuid.uuid4())
+
+        # ── OFF-TOPIC HARD BLOCK ──
+        if is_off_topic(user_message):
+            return Response({
+                "reply": "I am sorry! I am only here to assist you with food ordering. I cannot answer questions outside of our menu and restaurant services. Would you like to see our menu? 😊",
+                "session_key": session_key,
+                "cart_context": "Cart is currently empty.",
+                "mock": False,
+            }, status=status.HTTP_200_OK)
 
         # Save user message
         Conversation.objects.create(
@@ -59,6 +92,8 @@ class ChatView(APIView):
 
         # Call LLM
         llm = get_llm_client()
+        import socket
+        socket.setdefaulttimeout(300)
         llm_response = llm.chat(
             system_prompt=prompt_data["system"],
             messages=messages,
@@ -103,6 +138,7 @@ class HealthView(APIView):
 # ─────────────────────────────────────────────
 def chat(request):
     return JsonResponse({"message": "AI working"})
+
 class ChatUIView(View):
     """Serve the chat UI."""
     def get(self, request):

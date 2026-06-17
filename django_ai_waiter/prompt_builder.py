@@ -1,4 +1,4 @@
-from django_ai_waiter.app_settings import (
+﻿from django_ai_waiter.app_settings import (
     RESTAURANT_NAME,
     CURRENCY_SYMBOL,
     TAX_RATE,
@@ -10,13 +10,13 @@ def build_system_prompt(restaurant=None):
     """Build the AI waiter system prompt."""
 
     name = restaurant.name if restaurant else RESTAURANT_NAME
-    
+
     # Get menu items from mcp_client
     try:
         from django_ai_waiter.mcp_client import MockMCPClient
         client = MockMCPClient()
         menu_items = client.MOCK_MENU
-        
+
         # Format menu by category
         menu_text = "MENU:\n"
         categories = {}
@@ -25,7 +25,7 @@ def build_system_prompt(restaurant=None):
             if cat not in categories:
                 categories[cat] = []
             categories[cat].append(item)
-        
+
         for cat in sorted(categories.keys()):
             menu_text += f"\n{cat}:\n"
             for item in categories[cat]:
@@ -43,9 +43,18 @@ Your job is to:
 - Confirm orders before placing them
 - Always be polite and helpful
 
+STRICT RESTRICTION - OUT OF SCOPE TOPICS:
+You are ONLY a restaurant waiter. You CANNOT help with ANYTHING outside food ordering.
+If a customer asks about networking, coding, science, history, politics, weather,
+math, general knowledge, or ANY non-food topic, you must respond with:
+"I am sorry, I am only here to help you with your food order!
+Would you like to see our menu or add something to your cart?"
+Never answer off-topic questions. Never make exceptions. Stay in character always.
+
 {menu_text}
 
 Rules you must follow:
+- ONLY answer food and restaurant related questions - refuse everything else
 - NEVER skip order confirmation
 - ALWAYS confirm the full order before placing
 - If a customer asks for something not on the menu, politely say it is not available
