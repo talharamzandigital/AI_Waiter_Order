@@ -273,3 +273,32 @@ class ChatUIView(View):
     """Serve the chat UI."""
     def get(self, request):
         return render(request, 'django_ai_waiter/chat.html')
+    
+
+
+
+
+
+
+
+
+
+
+
+
+    # Jab AI Waiter ka frontend API ko message bhejta hai, to woh data aam tor par 
+    # JSON format mein hota hai, jaise {"message": "Recommend me a pizza"}. 
+    # Django REST Framework is data ko request.data mein store kar deta hai. 
+    # serializer = MessageSerializer(data=request.data) ek serializer object banata
+    # hai jo user ke bheje gaye data ko check karta hai. serializer.is_valid() 
+    # verify karta hai ke kya required fields mojood hain, unka data type sahi 
+    # hai aur koi field missing ya empty to nahi. Agar data sahi ho 
+    # to is_valid() True return karta hai aur program agle step par chala jata hai,
+    # lekin agar data galat ho, jaise user message ki jagah text bhej de ya kuch 
+    # na bheje, to is_valid() False return karega. serializer.errors phir 
+    # error batata hai, jaise "message": ["This field is required."]. 
+    # Response(serializer.errors, 400) client ko ye error wapas bhejta hai aur 400 
+    # (Bad Request) status code indicate karta hai ke request server tak to pahunch 
+    # gayi thi lekin user ne galat ya incomplete data bheja hai. JSON isliye use
+    # kiya jata hai kyun ke ye frontend aur backend ke darmiyan data exchange 
+    # karne ka sabse common aur lightweight format hai.

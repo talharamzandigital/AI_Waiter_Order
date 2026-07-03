@@ -1,3 +1,4 @@
+from django_ai_waiter.mcp_server import MCPServer
 from abc import ABC, abstractmethod
 from django_ai_waiter.app_settings import MCP_SERVER_URL, MCP_TIMEOUT
 
@@ -199,5 +200,5 @@ def is_available(self):
 
 
 def get_mcp_client():
-    """Factory function — returns Mock client for now."""
-    return MockMCPClient()
+    """Factory function — returns real DB-connected MCP server."""
+    return MCPServer()   # ✅ Ab real database use hoga

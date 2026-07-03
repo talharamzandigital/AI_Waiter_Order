@@ -80,6 +80,9 @@ class ChatbotService:
         # Step 2 — Check for tool call
         tool_result_text = ""
         tool_response = self.orchestrator.process_message(user_message)
+        print("MCP - Tool Called:", tool_response.get("has_tool_call"))
+        print("MCP - Tool Name:", tool_response.get("tool_used"))
+        print("MCP - Tool Result:", tool_response.get("result"))
 
         if tool_response["has_tool_call"]:
             tool_name = tool_response["tool_used"]
