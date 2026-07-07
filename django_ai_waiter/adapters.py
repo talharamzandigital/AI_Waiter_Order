@@ -22,29 +22,22 @@ class MenuAdapter:
                 categories[category] = []
             categories[category].append(item)
 
-        # Build readable menu text
-        lines = ["📋 MENU:\n"]
+        # Build simple, plain-text menu (no IDs, minimal symbols)
+        lines = ["Menu:"]
         for category, items in categories.items():
-            lines.append(f"── {category} ──")
+            lines.append(f"{category}:")
             for item in items:
-                line = (
-                    f"  • {item['name']} "
-                    f"— {CURRENCY_SYMBOL}{item['price']:.2f}"
-                )
+                line = f"- {item['name']}: {CURRENCY_SYMBOL}{item['price']:.2f}"
                 if item.get("is_vegetarian"):
-                    line += " 🌱"
+                    line += " (Vegetarian)"
                 if item.get("is_vegan"):
-                    line += " 🌿"
+                    line += " (Vegan)"
                 if item.get("is_gluten_free"):
-                    line += " (GF)"
-                if item.get("description"):
-                    line += f"\n    {item['description']}"
-                line += f"\n    ID: {item['id']}"
+                    line += " (Gluten Free)"
                 lines.append(line)
             lines.append("")
 
         return "\n".join(lines)
-
     @staticmethod
     def to_dict(menu_item):
         """Convert single MenuItem model to dict."""

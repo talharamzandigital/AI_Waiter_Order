@@ -109,7 +109,9 @@ class OllamaLLMClient(BaseLLMClient):
                 role = msg.get("role")
                 content = msg.get("content")
 
-                if role == last_role:
+                if role == last_role and role != "system":
+                    # Merge with previous message instead of dropping it
+                    cleaned_messages[-1]["content"] += "\n\n" + content
                     continue
 
                 cleaned_messages.append({

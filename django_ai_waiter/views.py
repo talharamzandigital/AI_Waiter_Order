@@ -1,4 +1,5 @@
-﻿import uuid
+﻿from django_ai_waiter.chatbot_service import ChatbotService
+import uuid
 from django.views import View
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
@@ -159,6 +160,9 @@ def get_session_cart_items(session_key: str) -> list:
 class ChatView(APIView):
     """Main chat endpoint for AI waiter."""
 
+    authentication_classes = []
+    permission_classes = []
+
     def post(self, request):
 
         # Validate input
@@ -180,7 +184,6 @@ class ChatView(APIView):
                 "cart_context": "Cart is currently empty.",
                 "mock": False,
             }, status=status.HTTP_200_OK)
-
         # ── STEP 2: EMPTY CART CHECK ──
         cart_items = get_session_cart_items(session_key)
 
@@ -200,50 +203,32 @@ class ChatView(APIView):
                 "mock": False,
             }, status=status.HTTP_200_OK)
 
-        # ── STEP 3: SAVE USER MESSAGE ──
-        Conversation.objects.create(
+        # ── STEP 3-6: USE CHATBOT SERVICE (Orchestrator + MCP + LLM) ──
+       # ── STEP 3-6: USE CHATBOT SERVICE (Orchestrator + MCP + LLM) ──
+        from django_ai_waiter.models import Restaurant
+
+        restaurant = Restaurant.objects.first()
+
+        service = ChatbotService(
             session_key=session_key,
-            role=Conversation.Role.USER,
-            content=user_message,
+            restaurant=restaurant,
+            table_number="1",
         )
-
-        # ── STEP 4: BUILD PROMPT ──
-        prompt_data = build_full_prompt(
-            session_key=session_key,
-            cart=None,
-            restaurant=None,
-        )
-
-        messages = prompt_data["history"]
-        messages.append({
-            "role": "user",
-            "content": user_message,
-        })
-
-        # ── STEP 5: CALL LLM ──
-        llm = get_llm_client()
         import socket
         socket.setdefaulttimeout(300)
-        llm_response = llm.chat(
-            system_prompt=prompt_data["system"],
-            messages=messages,
-        )
+        print("========== BEFORE ChatbotService.process() ==========")
 
-        reply = llm_response["content"]
-
-        # ── STEP 6: SAVE ASSISTANT REPLY ──
-        Conversation.objects.create(
-            session_key=session_key,
-            role=Conversation.Role.ASSISTANT,
-            content=reply,
-        )
+        result = service.process(user_message)
+        print("######## Creating ChatbotService ########")
+        reply = result["reply"]
+        
 
         # ── STEP 7: RETURN RESPONSE ──
         return Response({
             "reply": reply,
             "session_key": session_key,
-            "cart_context": prompt_data["cart_context"],
-            "mock": llm_response.get("mock", True),
+            "cart_context": "",
+            "mock": result.get("mock", False),
         }, status=status.HTTP_200_OK)
 
 
@@ -273,11 +258,6 @@ class ChatUIView(View):
     """Serve the chat UI."""
     def get(self, request):
         return render(request, 'django_ai_waiter/chat.html')
-    
-
-
-
-
 
 
 
@@ -302,3 +282,18 @@ class ChatUIView(View):
     # gayi thi lekin user ne galat ya incomplete data bheja hai. JSON isliye use
     # kiya jata hai kyun ke ye frontend aur backend ke darmiyan data exchange 
     # karne ka sabse common aur lightweight format hai.
+
+
+
+    # is_cart_request() function check karta hai ke user ka message 
+    # cart se related hai ya nahi. for phrase in CART_KEYWORDS list 
+    # ke har phrase (jaise "show my cart" ya "view cart") ko ek ek 
+    # karke message me dhoondta hai. Agar koi phrase message me mil 
+    #     jaye to return True karta hai, jis ka matlab hai ke user cart dekhna
+    #     chahta hai. Agar puri list check karne ke baad koi phrase na mile to
+    #     return False karta hai, yani message cart se related nahi hai.
+
+    # Han, ye function models.py se Conversation model ko use kar raha hai. 
+    # Model ki madad se database me save hui purani assistant chats nikalta
+    # hai aur check karta hai ke kisi message me "added to cart" likha hua hai
+    # ya nahi.
