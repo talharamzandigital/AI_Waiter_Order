@@ -39,3 +39,7 @@ htmlcov/
 # OS
 .DS_Store
 Thumbs.db
+# Models
+*.gguf
+*.bin
+.venv/
