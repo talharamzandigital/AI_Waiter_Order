@@ -24,6 +24,7 @@
 
 # ORDER_NUMBER_PREFIX = _AI_WAITER.get("ORDER_NUMBER_PREFIX", "ORD")
 # MIN_ORDER_AMOUNT = _AI_WAITER.get("MIN_ORDER_AMOUNT", 5.00)
+import os
 from django.conf import settings
 
 
@@ -43,14 +44,17 @@ TAX_RATE = _AI_WAITER.get("TAX_RATE", 0.08)
 # GROQ AI SETTINGS (UPDATED)
 # ============================================================
 
-GROQ_API_KEY = _AI_WAITER.get("GROQ_API_KEY", "")
+GROQ_API_KEY = getattr(settings, "GROQ_API_KEY", "") or _AI_WAITER.get("GROQ_API_KEY", "")
 
-AI_MODEL = _AI_WAITER.get(
-    "AI_MODEL",
-    "llama-3.1-8b-instant"   # best Groq model for chatbot
+GROQ_MODEL = (
+    getattr(settings, "GROQ_MODEL", "")
+    or _AI_WAITER.get("GROQ_MODEL", "")
+    or os.environ.get("GROQ_MODEL", "openai/gpt-oss-20b")
 )
 
-AI_MAX_TOKENS = _AI_WAITER.get("AI_MAX_TOKENS", 1024)
+AI_MODEL = _AI_WAITER.get("AI_MODEL", GROQ_MODEL)
+
+AI_MAX_TOKENS = max(512, _AI_WAITER.get("AI_MAX_TOKENS", 1024))
 AI_TEMPERATURE = _AI_WAITER.get("AI_TEMPERATURE", 0.3)
 
 # ============================================================
