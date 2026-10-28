@@ -132,7 +132,7 @@ When Ollama is running at `http://localhost:11434`, the Django application (`dja
 
 ## Known Limitations
 
-1. **Small Dataset & Lack of Evaluation Split**: The training dataset contains only **52 examples** trained for **~9 epochs** (60 steps). There was **no validation split** and **no held-out test evaluation**. Consequently, the low training loss ($0.1703$ at step 50) reflects memorization of the training set rather than verified generalization accuracy.
+1. **Small Dataset & Lack of Evaluation Split**: The training dataset contains only **52 examples** trained for **~9 epochs** (60 steps). There was **no validation split** and **no held-out test evaluation**. Consequently, the low training loss ($0.1703$ at step 50) is not evidence of generalization (it may partly reflect memorization of the small training set).
 2. **Prompt Template Mismatch**: The dataset formatting script (Cell 7) formatted training samples using Llama-2 style tags:
    ```text
    <s>[INST] <<SYS>>
@@ -144,3 +144,5 @@ When Ollama is running at `http://localhost:11434`, the Django application (`dja
    However, the base model is `Mistral-7B-Instruct-v0.3`, which natively uses `[INST] ... [/INST]` prompt syntax and does not recognize the `<<SYS>>` syntax.
 3. **No `TEMPLATE` in Modelfile**: The provided `fine_tuning/Modelfile` defines only `FROM ./ai-waiter.gguf` and `SYSTEM """..."""`, without a custom `TEMPLATE` block specifying exact token delimiters.
 4. **Baked-in Prices vs. Live Tools**: Fixed prices and item details are baked directly into the training texts. In production, live menu availability and pricing are strictly retrieved via database tools (MCP / `MCPServer`), not from LLM internal weights.
+5. **Conflicting duplicate in the dataset**: The user message "What payment methods do you accept?" appears twice (zero-based records 44 and 47) with different assistant answers (cash only vs. cash, JazzCash, EasyPaisa and card), so the model saw conflicting targets for the same input.
+6. **Single-turn only**: All 52 examples are single-turn (one user message and one assistant reply). There are no multi-turn dialogues, so behaviour across a longer order conversation (changing items, confirming) was neither trained nor evaluated.
