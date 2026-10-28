@@ -1,5 +1,6 @@
 import time
 import logging
+from django.conf import settings
 from django.core.cache import cache
 from django.http import JsonResponse
 
@@ -14,32 +15,35 @@ class RateLimitMiddleware:
 
     def __init__(self, get_response):
         self.get_response = get_response
-        self.rate_limit = 60      # requests
-        self.time_window = 60     # seconds
+        self.rate_limit = getattr(settings, "RATE_LIMIT_REQUESTS", 60)
+        self.time_window = getattr(settings, "RATE_LIMIT_WINDOW", 60)
 
     def __call__(self, request):
         # Only rate limit API endpoints
         if request.path.startswith("/api/"):
+            rate_limit = getattr(settings, "RATE_LIMIT_REQUESTS", self.rate_limit)
+            time_window = getattr(settings, "RATE_LIMIT_WINDOW", self.time_window)
+
             ip = self.get_client_ip(request)
             key = f"rate_limit:{ip}"
 
             # Get current request count
             requests = cache.get(key, 0)
 
-            if requests >= self.rate_limit:
+            if requests >= rate_limit:
                 logger.warning(
                     f"Rate limit exceeded for IP: {ip}"
                 )
                 return JsonResponse(
                     {
                         "error": "Rate limit exceeded. Please wait before trying again.",
-                        "retry_after": self.time_window,
+                        "retry_after": time_window,
                     },
                     status=429,
                 )
 
             # Increment request count
-            cache.set(key, requests + 1, self.time_window)
+            cache.set(key, requests + 1, time_window)
 
         response = self.get_response(request)
         return response

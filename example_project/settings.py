@@ -28,6 +28,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django_ai_waiter.security.RateLimitMiddleware',
 ]
 
 ROOT_URLCONF = 'example_project.urls'
@@ -78,6 +79,16 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 GROQ_API_KEY = config('GROQ_API_KEY', default='')
 GROQ_MODEL = config('GROQ_MODEL', default='openai/gpt-oss-20b')
+
+RATE_LIMIT_REQUESTS = config('RATE_LIMIT_REQUESTS', default=60, cast=int)
+RATE_LIMIT_WINDOW = config('RATE_LIMIT_WINDOW', default=60, cast=int)
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'ai-waiter-cache',
+    }
+}
 
 
 
