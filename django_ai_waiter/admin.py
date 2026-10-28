@@ -29,3 +29,8 @@ class OrderAdmin(admin.ModelAdmin):
 @admin.register(Conversation)
 class ConversationAdmin(admin.ModelAdmin):
     list_display = ["session_key", "role", "created_at"]
+
+
+
+    # password
+    # Admin@123a

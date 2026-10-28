@@ -1,3 +1,5 @@
+import re
+
 # from abc import ABC, abstractmethod
 # from django_ai_waiter.app_settings import MCP_SERVER_URL, MCP_TIMEOUT
 
@@ -215,8 +217,10 @@
 #     if use_real:
 #         return RealMCPClient()
 #     return MockMCPClient()
+
 from django.db.models import Q
 from django_ai_waiter.app_settings import CURRENCY_SYMBOL
+from django_ai_waiter.cart_service import CartService, CartServiceError
 
 
 class MCPServer:
@@ -224,11 +228,18 @@ class MCPServer:
 
     def get_menu(self, category=None):
         """Get full menu from database."""
+
+        print("\n[MCP] ===== get_menu() CALLED =====")
+        print("[MCP] Category:", category)
+
         from django_ai_waiter.models import MenuItem
 
         items = MenuItem.objects.filter(
             is_available=True
         ).select_related("category", "restaurant")
+
+        print("[MCP] Query Executed Successfully")
+        print("[MCP] Total Items Found:", items.count())
 
         if category:
             items = items.filter(
@@ -236,6 +247,7 @@ class MCPServer:
             )
 
         result = []
+
         for item in items:
             result.append({
                 "id": str(item.id),
@@ -250,22 +262,46 @@ class MCPServer:
                 "allergens": item.allergens,
             })
 
+        print("[MCP] Returning Data To Chatbot")
+        print("[MCP] ==========================\n")
+
         return {
             "success": True,
             "items": result,
             "count": len(result),
         }
 
+    def _normalize_query(self, query):
+        query = str(query or "").lower().strip()
+        query = re.sub(r"[^a-z0-9\s]", " ", query)
+        query = re.sub(r"\s+", " ", query)
+        return query
+
     def search_items(self, query):
         """Search menu items by name or description."""
         from django_ai_waiter.models import MenuItem
 
-        items = MenuItem.objects.filter(
-            is_available=True
-        ).filter(
+        query = self._normalize_query(query)
+        if not query:
+            return {"success": True, "items": [], "count": 0}
+
+        base_qs = MenuItem.objects.filter(is_available=True).select_related("category")
+        exact_matches = base_qs.filter(
             Q(name__icontains=query) |
             Q(description__icontains=query)
-        ).select_related("category")
+        )
+
+        if exact_matches.exists():
+            items = exact_matches
+        else:
+            tokens = [token for token in query.split() if len(token) > 1]
+            if not tokens:
+                items = MenuItem.objects.none()
+            else:
+                token_query = Q()
+                for token in tokens:
+                    token_query |= Q(name__icontains=token) | Q(description__icontains=token)
+                items = base_qs.filter(token_query).distinct()
 
         result = []
         for item in items:
@@ -310,6 +346,47 @@ class MCPServer:
             return self.search_items(query=inputs.get("query", ""))
         elif tool_name == "check_availability":
             return self.check_availability(item_id=inputs.get("item_id"))
+        elif tool_name == "add_to_cart":
+            try:
+                session_key = inputs.get("session_key")
+                cart_service = CartService(session_key=session_key)
+                cart_item = cart_service.add_item(
+                    menu_item_id=inputs.get("item_id"),
+                    quantity=inputs.get("quantity", 1),
+                    special_instructions=inputs.get("special_instructions", ""),
+                )
+                return {
+                    "success": True,
+                    "message": f"Added {cart_item.quantity}x {cart_item.menu_item.name} to cart",
+                    "item": {
+                        "id": str(cart_item.menu_item.id),
+                        "name": cart_item.menu_item.name,
+                        "quantity": cart_item.quantity,
+                        "unit_price": float(cart_item.unit_price),
+                    },
+                }
+            except CartServiceError as e:
+                return {"success": False, "message": str(e)}
+        elif tool_name == "get_cart":
+            session_key = inputs.get("session_key")
+            cart_service = CartService(session_key=session_key)
+            return {"success": True, "cart": cart_service.get_cart_summary()}
+        elif tool_name == "remove_from_cart":
+            try:
+                session_key = inputs.get("session_key")
+                cart_service = CartService(session_key=session_key)
+                cart_service.remove_item(menu_item_id=inputs.get("item_id"))
+                return {"success": True, "message": "Item removed"}
+            except CartServiceError as e:
+                return {"success": False, "message": str(e)}
+        elif tool_name == "place_order":
+            try:
+                session_key = inputs.get("session_key")
+                cart_service = CartService(session_key=session_key)
+                order_summary = cart_service.confirm_order()
+                return {"success": True, "order": order_summary, "message": "Order confirmed"}
+            except CartServiceError as e:
+                return {"success": False, "message": str(e)}
         return {"success": False, "message": f"Unknown tool: {tool_name}"}
 
     def is_available(self):

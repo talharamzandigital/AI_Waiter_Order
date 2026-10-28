@@ -106,3 +106,21 @@ def validate_session_key(session_key):
         "0123456789-_"
     )
     return all(c in allowed for c in session_key)
+
+# Ye file project ki security aur protection ko manage karne ke liye banayi
+# gayi hai. Isme RateLimitMiddleware API endpoints par aane wali requests ko
+# monitor karta hai aur har IP address ko ek minute ke andar zyada se zyada 
+# 60 requests bhejne ki ijazat deta hai. Agar koi user ya bot is limit se zyada 
+# requests bhejne ki koshish kare to server 429 (Too Many Requests) error ke sath 
+# request ko block kar deta hai. SecurityHeadersMiddleware har response ke sath 
+# security headers add karta hai jo application ko clickjacking, XSS aur dusre 
+# browser-based attacks se bachate hain aur sensitive data ko browser cache mein 
+# save hone se rokte hain. sanitize_input() function user ke input ko clean karta 
+# hai, uski maximum length ko limit karta hai, extra spaces aur null bytes hata 
+# deta hai taake invalid ya harmful data system mein na ja sake. Iske baad 
+# validate_session_key() function session key ko verify karta hai aur check
+# karta hai ke woh khali na ho, 64 characters se zyada lambi na ho aur usme sirf
+# letters, numbers, hyphen (-) aur underscore (_) hi maujood hon. Mukhtasir 
+# taur par, ye puri file API ko spam requests, invalid input aur security 
+# attacks se bachane ka kaam karti hai aur project ko zyada secure aur reliable
+#  banati hai.

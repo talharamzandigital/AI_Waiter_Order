@@ -1,3 +1,5 @@
+import re
+from django_ai_waiter.mcp_server import MCPServer
 from abc import ABC, abstractmethod
 from django_ai_waiter.app_settings import MCP_SERVER_URL, MCP_TIMEOUT
 
@@ -118,13 +120,31 @@ class MockMCPClient(BaseMCPClient):
     """Mock MCP client for testing without real MCP server."""
 
     MOCK_MENU = [
-        {"id": "1", "name": "Chicken Burger", "price": 12.99, "category": "Mains"},
-        {"id": "2", "name": "Veggie Pizza", "price": 10.99, "category": "Mains"},
-        {"id": "3", "name": "Caesar Salad", "price": 7.99, "category": "Starters"},
-        {"id": "4", "name": "Garlic Bread", "price": 4.99, "category": "Starters"},
-        {"id": "5", "name": "Chocolate Cake", "price": 1.00, "category": "Desserts"},
-        {"id": "6", "name": "Chocolate Lava Cake", "price": 1.00, "category": "Desserts"},
-        {"id": "7", "name": "Mango Juice", "price": 3.99, "category": "Drinks"},
+        {"id": "1", "name": "Classic Beef Burger", "price": 350, "category": "Burgers"},
+        {"id": "2", "name": "Zinger Burger", "price": 450, "category": "Burgers"},
+        {"id": "3", "name": "Double Patty Burger", "price": 650, "category": "Burgers"},
+        {"id": "4", "name": "BBQ Burger", "price": 550, "category": "Burgers"},
+        {"id": "5", "name": "Cheese Burger", "price": 400, "category": "Burgers"},
+        {"id": "6", "name": "Margherita Pizza", "price": 800, "category": "Pizza"},
+        {"id": "7", "name": "BBQ Chicken Pizza", "price": 1100, "category": "Pizza"},
+        {"id": "8", "name": "Pepperoni Pizza", "price": 1200, "category": "Pizza"},
+        {"id": "9", "name": "Veggie Pizza", "price": 900, "category": "Pizza"},
+        {"id": "10", "name": "French Fries", "price": 200, "category": "Starters"},
+        {"id": "11", "name": "Loaded Fries", "price": 350, "category": "Starters"},
+        {"id": "12", "name": "Garlic Bread", "price": 150, "category": "Starters"},
+        {"id": "13", "name": "Chicken Wings", "price": 550, "category": "Starters"},
+        {"id": "14", "name": "Onion Rings", "price": 250, "category": "Starters"},
+        {"id": "15", "name": "Chicken Wrap", "price": 400, "category": "Wraps"},
+        {"id": "16", "name": "Zinger Wrap", "price": 450, "category": "Wraps"},
+        {"id": "17", "name": "Club Sandwich", "price": 350, "category": "Wraps"},
+        {"id": "18", "name": "Chocolate Lava Cake", "price": 300, "category": "Desserts"},
+        {"id": "19", "name": "Ice Cream", "price": 200, "category": "Desserts"},
+        {"id": "20", "name": "Brownie", "price": 250, "category": "Desserts"},
+        {"id": "21", "name": "Coca Cola", "price": 100, "category": "Drinks"},
+        {"id": "22", "name": "Sprite", "price": 100, "category": "Drinks"},
+        {"id": "23", "name": "Mango Juice", "price": 150, "category": "Drinks"},
+        {"id": "24", "name": "Mineral Water", "price": 80, "category": "Drinks"},
+        {"id": "25", "name": "Milkshake", "price": 350, "category": "Drinks"},
     ]
 
     def __init__(self):
@@ -145,9 +165,16 @@ class MockMCPClient(BaseMCPClient):
             return {"success": True, "items": items}
 
         elif tool_name == "search_items":
-            query = inputs.get("query", "").lower()
-            items = [i for i in self.MOCK_MENU
-                    if query in i["name"].lower()]
+            query = inputs.get("query", "").lower().strip()
+            if not query:
+                return {"success": True, "items": []}
+
+            items = [i for i in self.MOCK_MENU if query in i["name"].lower() or query in i.get("description", "").lower()]
+            if not items:
+                tokens = [token for token in re.sub(r"[^a-z0-9\s]", " ", query).split() if len(token) > 1]
+                for token in tokens:
+                    items.extend([i for i in self.MOCK_MENU if token in i["name"].lower() or token in i.get("description", "").lower()])
+                items = [dict(t) for t in {tuple(sorted(item.items())) for item in items}]
             return {"success": True, "items": items}
 
         elif tool_name == "add_to_cart":
@@ -182,6 +209,8 @@ class MockMCPClient(BaseMCPClient):
         return True
 
 
-def get_mcp_client():
-    """Factory function — returns Mock client for now."""
+def get_mcp_client(use_real=True):
+    """Factory function — returns real DB-connected MCP server or mock client."""
+    if use_real:
+        return MCPServer()
     return MockMCPClient()

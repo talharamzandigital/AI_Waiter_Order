@@ -123,6 +123,18 @@ Response:
 }
 ```
 
+## Fine-Tuned Model
+
+A custom LoRA fine-tuned model based on `Mistral-7B-Instruct-v0.3` is available for local inference:
+- **Documentation**: See [fine_tuning/README.md](fine_tuning/README.md) for full hyperparameter specifications, training loss logs, and limitations.
+- **Model Weights (GGUF)**: Hosted on Hugging Face at [Talha-rajput/ai-waiter-quickbites](https://huggingface.co/Talha-rajput/ai-waiter-quickbites).
+
+### LLM Runtime Priority
+As confirmed in the code ([`django_ai_waiter/llm_client.py:173-182`](django_ai_waiter/llm_client.py)), the application selects its LLM provider in the following runtime order:
+1. **Ollama (`ai-waiter:latest`)**: Checked first. If local Ollama is active on `http://localhost:11434` and responds to `/api/tags`, `OllamaLLMClient` is returned.
+2. **Groq (`llama-3.1-8b-instant`)**: If Ollama is unavailable and `GROQ_API_KEY` is configured, `GroqLLMClient` is returned.
+3. **Mock Fallback**: If neither Ollama nor Groq is reachable, the application falls back to `MockLLMClient` returning deterministic mock responses without raising exceptions.
+
 ## Running Tests
 
 ```bash
