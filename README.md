@@ -4,7 +4,7 @@ An enterprise-grade AI-powered restaurant ordering system built with Django, Pos
 
 ## Features
 
-- 🤖 Real AI waiter powered by Groq (Llama 3)
+- 🤖 Real AI waiter powered by Groq (openai/gpt-oss-20b)
 - 🛒 Smart cart management with state machine
 - 📋 Full menu management
 - 🔒 Enterprise security with rate limiting
@@ -132,7 +132,7 @@ A custom LoRA fine-tuned model based on `Mistral-7B-Instruct-v0.3` is available 
 ### LLM Runtime Priority
 As confirmed in the code ([`django_ai_waiter/llm_client.py:173-182`](django_ai_waiter/llm_client.py)), the application selects its LLM provider in the following runtime order:
 1. **Ollama (`ai-waiter:latest`)**: Checked first. If local Ollama is active on `http://localhost:11434` and responds to `/api/tags`, `OllamaLLMClient` is returned.
-2. **Groq (`llama-3.1-8b-instant`)**: If Ollama is unavailable and `GROQ_API_KEY` is configured, `GroqLLMClient` is returned.
+2. **Groq (`openai/gpt-oss-20b`)**: If Ollama is unavailable and `GROQ_API_KEY` is configured, `GroqLLMClient` is returned.
 3. **Mock Fallback**: If neither Ollama nor Groq is reachable, the application falls back to `MockLLMClient` returning deterministic mock responses without raising exceptions.
 
 ## Running Tests
